@@ -7,6 +7,11 @@ import {
   PostgrestSingleResponse,
 } from './types'
 
+type ExplainFormat = 'text' | 'json'
+type ExplainResultType<F extends ExplainFormat> = F extends 'json' ?
+  PostgrestResponse<Record<string, unknown>> :
+  PostgrestSingleResponse<string>
+
 export default class PostgrestTransformBuilder<
   Schema extends GenericSchema,
   Row extends Record<string, unknown>,
@@ -192,23 +197,21 @@ export default class PostgrestTransformBuilder<
    * @param options.format - The format of the output, can be `"text"` (default)
    * or `"json"`
    */
-  explain({
+  explain<F extends ExplainFormat>({
     analyze = false,
     verbose = false,
     settings = false,
     buffers = false,
     wal = false,
-    format = 'text',
+    format = 'text' as F,
   }: {
     analyze?: boolean
     verbose?: boolean
     settings?: boolean
     buffers?: boolean
     wal?: boolean
-    format?: 'json' | 'text'
-  } = {}):
-    | PromiseLike<PostgrestResponse<Record<string, unknown>>>
-    | PromiseLike<PostgrestSingleResponse<string>> {
+    format?: F
+  } = {}): PromiseLike<ExplainResultType<F>> {
     const options = [
       analyze ? 'analyze' : null,
       verbose ? 'verbose' : null,
@@ -223,8 +226,7 @@ export default class PostgrestTransformBuilder<
     this.headers[
       'Accept'
     ] = `application/vnd.pgrst.plan+${format}; for="${forMediatype}"; options=${options};`
-    if (format === 'json') return this as PromiseLike<PostgrestResponse<Record<string, unknown>>>
-    else return this as PromiseLike<PostgrestSingleResponse<string>>
+    return this as PromiseLike<ExplainResultType<F>>
   }
 
   /**
